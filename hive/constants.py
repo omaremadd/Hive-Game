@@ -6,6 +6,9 @@ from hive.point import Point
 
 WIDTH, HEIGHT = 800, 600
 
+WIN = pygame.display.set_mode((WIDTH, HEIGHT))
+
+
 RED = (255, 0, 0)
 BLACK = (0, 0, 0)
 BLUE = (0, 0, 255)
@@ -15,8 +18,10 @@ GREY = (128, 128, 128)
 FPS = 60
 PIECES_SCALING = (44, 24)
 
+
 # Images
 background_image = pygame.image.load("Assets/board_background.jpg")
+
 
 # Black pieces
 black_ant = pygame.transform.scale(
@@ -34,6 +39,7 @@ black_grasshopper = pygame.transform.scale(
 black_beetle = pygame.transform.scale(
     pygame.image.load("Assets/black_beetle.png"), PIECES_SCALING
 )
+
 
 # White pieces
 white_ant = pygame.transform.scale(
