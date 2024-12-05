@@ -1,0 +1,2 @@
+# Require Python 3.10.15
+pygame==2.6.1
