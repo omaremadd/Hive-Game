@@ -4,10 +4,7 @@ from math import sqrt
 from hive.layout import Layout
 from hive.point import Point
 
-WIDTH, HEIGHT = 900, 750
-
-WIN = pygame.display.set_mode((WIDTH, HEIGHT))
-
+WIDTH, HEIGHT = 800, 600
 
 RED = (255, 0, 0)
 BLACK = (0, 0, 0)
@@ -15,13 +12,11 @@ BLUE = (0, 0, 255)
 WHITE = (255, 255, 255)
 GREY = (128, 128, 128)
 
-FPS = 15
-PIECES_SCALING = (90, 90)
-
+FPS = 60
+PIECES_SCALING = (44, 24)
 
 # Images
 background_image = pygame.image.load("Assets/board_background.jpg")
-
 
 # Black pieces
 black_ant = pygame.transform.scale(
@@ -39,7 +34,6 @@ black_grasshopper = pygame.transform.scale(
 black_beetle = pygame.transform.scale(
     pygame.image.load("Assets/black_beetle.png"), PIECES_SCALING
 )
-
 
 # White pieces
 white_ant = pygame.transform.scale(
@@ -66,7 +60,6 @@ GRID_HEIGHT = 2
 HEX_RADIUS = 30
 
 # Flat top calculation
-
 LAYOUT_FLAT = Orientation(
     (3.0 / 2.0, 0.0, sqrt(3.0) / 2.0, sqrt(3.0)),
     (2.0 / 3.0, 0.0, -1.0 / 3.0, sqrt(3.0) / 3.0),
