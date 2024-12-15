@@ -1,5 +1,6 @@
 from .hex import Hex
 from .piece import Piece
+from collections import defaultdict
 
 
 class Board:
@@ -25,7 +26,7 @@ class Board:
         self.board.insert(0, piece)
 
     def __repr__(self):
-        return f"Board = {self.board}\n\nboard = {self.board}, unplaced Pieces ={self.unplaced_pieces}"
+        return f"\n\nBoard = {self.board}\n\nboard = {self.board}, unplaced Pieces ={self.unplaced_pieces}"
 
     def remove_piece_by_hex(self, hex: Hex) -> Piece | None:
         """removes a piece from the board and returns it
@@ -140,3 +141,52 @@ class Board:
 
     def total_moves(self) -> int:
         return self.black_pieces_moved + self.white_pieces_moved
+
+    def piece_exists(self, hex: Hex):
+        for piece in self.board:
+            if piece.hex.q == hex.q and piece.hex.r == hex.r and piece.hex.s == hex.s:
+                return True
+        return False
+
+    def get_legal_placements(self, piece_type: str):
+        placements = []
+        for piece in self.board:
+            if piece.piece_type == piece_type:
+                placements += piece.generate_adj_hexs().values()
+                placements = [i for i in placements if not self.piece_exists(i)]
+                placements = list(set(placements))
+        for piece in self.board:
+            if piece.piece_type != piece_type:
+                placements = [
+                    i for i in placements if i not in piece.generate_adj_hexs().values()
+                ]
+        return placements
+
+    def place_piece(self, target_hex: Hex, selected_piece_key):
+        # Attempt to place the unplaced piece on the board
+        piece_type, piece_name = selected_piece_key.split("_")
+        new_piece = Piece(
+            hex=target_hex,
+            piece_name=piece_name,
+            piece_type=piece_type,
+        )
+        selected_piece = new_piece
+        if self.is_valid_move(selected_piece, target_hex):
+            # Decrement the count
+            self.unplaced_pieces[selected_piece_key]["count"] -= 1
+
+            # Create a new Piece instance and add it to the board
+
+            self.board.append(new_piece)
+            print(f"Placed {selected_piece_key} at {target_hex}")
+
+            # Remove the stack if count reaches zero
+            if self.unplaced_pieces[selected_piece_key]["count"] == 0:
+                del self.unplaced_pieces[selected_piece_key]
+
+            selected_piece_key = None  # Reset selection
+            selected_piece = None
+        else:
+            print("Invalid move. Please select a valid destination.")
+            selected_piece_key = None  # Reset selection
+            selected_piece = None

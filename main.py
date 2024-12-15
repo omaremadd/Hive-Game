@@ -42,6 +42,8 @@ def main():
                     for key, data in board.unplaced_pieces.items():
                         if data["position"] == hex_clicked and data["count"] > 0:
                             selected_piece_key = key
+                            if not board.is_first_move: 
+                                draw_suggested_moves(board.get_legal_placements(str(key).split('_')[0]))
                             print(f"Selected unplaced piece: {selected_piece_key}")
                             break
                     else:
@@ -52,24 +54,26 @@ def main():
                             print(f"Selected placed piece at {selected_piece.hex}")
 
                     # This is where we draw our suggested moves
-                    draw_suggested_moves([Hex(q=0, r=0)])
+                    if board.is_first_move: draw_suggested_moves([Hex(q=1, r=1)])
                 else:
                     # A piece is already selected
                     target_hex = hex_clicked  # The hex where the user clicked
-
+                    board.is_first_move = False
                     if selected_piece_key:
                         # Attempt to place the unplaced piece on the board
+                        piece_type, piece_name = selected_piece_key.split("_")
+                        new_piece = Piece(
+                            hex=target_hex,
+                            piece_name=piece_name,
+                            piece_type=piece_type,
+                        )
+                        selected_piece = new_piece
                         if board.is_valid_move(selected_piece, target_hex):
                             # Decrement the count
                             board.unplaced_pieces[selected_piece_key]["count"] -= 1
 
                             # Create a new Piece instance and add it to the board
-                            piece_type, piece_name = selected_piece_key.split("_")
-                            new_piece = Piece(
-                                hex=target_hex,
-                                piece_name=piece_name,
-                                piece_type=piece_type,
-                            )
+
                             board.board.append(new_piece)
                             print(f"Placed {selected_piece_key} at {target_hex}")
 
@@ -78,9 +82,11 @@ def main():
                                 del board.unplaced_pieces[selected_piece_key]
 
                             selected_piece_key = None  # Reset selection
+                            selected_piece = None
                         else:
                             print("Invalid move. Please select a valid destination.")
                             selected_piece_key = None  # Reset selection
+                            selected_piece = None
                     elif selected_piece:
                         # Attempt to move the selected placed piece to the clicked hex
                         if board.is_valid_move(selected_piece, target_hex):
