@@ -10,39 +10,55 @@ class Board:
     def __init__(self, grid_radius: int = 5):
 
         self.board: dict[Hex, list[Piece]] = {}
-        rsdiff = 1 * grid_radius
+        self.grid_radius=grid_radius
         # Create a hexagonal grid
         for q in range(-grid_radius, grid_radius + 1):
             for r in range(-grid_radius, grid_radius + 1):
                 s = -q - r
-                if abs(r - s) <= rsdiff:
+                if abs(r - s) <= self.grid_radius:
+                    hex=Hex(q, r)
                     # Add an empty stack at each hex coordinate
-                    self.board[Hex(q, r)] = []
+                    self.board[hex] = []
+
+        self.white_queen_location: Hex = None
+        self.black_queen_location: Hex = None
+
+        self.spider_directions = {
+            Hex(0, -1): ((-1, 0), (1, -1)),
+            Hex(1, -1): ((0, -1), (1, 0)),
+            Hex(1, 0): ((1, -1), (0, 1)),
+            Hex(0, 1): ((1, 0), (-1, 1)),
+            Hex(-1, 1): ((0, 1), (-1, 0)),
+            Hex(-1, 0): ((-1, 1), (0, -1)),
+        }
+
+        self.slide_directions = {
+            (0, -1): ((-1, 0), (1, -1)),
+            (1, -1): ((0, -1), (1, 0)),
+            (1, 0): ((1, -1), (0, 1)),
+            (0, 1): ((1, 0), (-1, 1)),
+            (-1, 1): ((0, 1), (-1, 0)),
+            (-1, 0): ((-1, 1), (0, -1)),
+        }
+        
 
     def __repr__(self):
         return f"\n\nBoard = {self.board}\n\nboard = {self.board}, unplaced Pieces ={self.unplaced_pieces}"
 
-    def remove_piece_by_hex(self, hex: Hex) -> Piece | None:
-        """removes a piece from the board and returns it
-
-        Args:
-            hex (Hex): Pressed element required to be moved
-
-        Returns:
-            Piece: The element in the board required to be removed
-        """
-        for piece in self.board:
-            if piece.hex.q == hex.q and piece.hex.r == hex.r and piece.hex.s == hex.s:
-                self.board.remove(piece)
-                return piece
-        raise ValueError("Element doesn't exist in remove_piece_by_hex function")
-
+    def hex_inside_board(self,hex:Hex):
+        return abs(hex.q)<=self.grid_radius and abs(hex.r)<=self.grid_radius and abs(2*hex.r+hex.q)<=self.grid_radius
+    
     def hex_empty(self, hex: Hex):
-        return hex not in self.board or not self.board[hex]
+        return not self.board[hex]
 
     def place_piece(self, target_hex: Hex, piece: Piece):
-        if target_hex not in self.board:
+        if not self.hex_inside_board(target_hex):
             raise ValueError(f"No pieces at cell {target_hex} to remove!")
+        if piece.piece_name == "Queen":
+            if piece.piece_type == "black":
+                self.black_queen_location = target_hex
+            else:
+                self.white_queen_location = target_hex
         self.board[target_hex].append(piece)  # Add the piece to the stack
 
     def remove_top_piece(self, hex: Hex):
@@ -74,7 +90,7 @@ class Board:
         Returns:
             str: The piece on top of the stack, or None if the stack is empty.
         """
-        if self.hex_empty(hex):
+        if not self.hex_inside_board(hex) or self.hex_empty(hex):
             return None
         return self.board[hex][-1]
 
@@ -100,7 +116,7 @@ class Board:
                     # Check if the hex is surrounded by pieces of the opposite color
                     is_valid = False
                     for neighbor in hex.generate_adj_hexs():
-                        if neighbor not in self.board:
+                        if not self.hex_inside_board(neighbor):
                             continue
                         neighbor_piece = self.peek_top_piece(neighbor)
                         if neighbor_piece is None:
@@ -116,7 +132,7 @@ class Board:
                         possible_positions.append(hex)
 
         for position in possible_positions:
-            if position not in self.board:
+            if not self.hex_inside_board(position):
                 possible_positions.remove(position)
 
         return possible_positions
@@ -140,7 +156,7 @@ class Board:
 
             for adjacent_hex in adjacent_hexes:
                 # Check if the hex is empty
-                if self.hex_empty(adjacent_hex):
+                if self.hex_inside_board(adjacent_hex) and  self.hex_empty(adjacent_hex):
                     # Check if the move doesn't break the hive
                     if self.is_adjacent_to_pieces(adjacent_hex, hex) and self.can_slide(
                         hex, adjacent_hex
@@ -165,10 +181,11 @@ class Board:
                     # Skip the current hex and already visited ones
                     if adj_hex in visited:
                         continue
-
+                    
                     # Check if the hex is empty and adjacent to an occupied cell
                     if (
-                        self.hex_empty(adj_hex)
+                        self.hex_inside_board(adj_hex)
+                        and self.hex_empty(adj_hex)
                         and self.is_adjacent_to_pieces(adj_hex, hex)
                         and self.can_slide(current_hex, adj_hex)
                     ):
@@ -184,7 +201,7 @@ class Board:
 
             for adj_hex in adjacent_hexes:
                 # Check if the Beetle is on the ground level or on top of another piece
-                if self.hex_empty(adj_hex):
+                if self.hex_inside_board(adj_hex) and self.hex_empty(adj_hex):
                     # Ground-level move to an empty hex
                     if self.is_adjacent_to_pieces(adj_hex, hex):
                         possible_positions.append(adj_hex)
@@ -199,12 +216,9 @@ class Board:
                 current_hex = hex
                 found_pieces = False  # Ensure the Hopper crosses at least one piece
 
-                while (current_hex + direction) in self.board:
+                while self.hex_inside_board((current_hex + direction)):
                     # Move in the current direction
                     next_hex = current_hex + direction
-
-                    if next_hex not in self.board:
-                        break  # Out of bounds
 
                     if not self.hex_empty(next_hex):
                         found_pieces = (
@@ -220,14 +234,7 @@ class Board:
                     current_hex = next_hex
         elif isinstance(piece, Spider):
             # Check all hexes on the board
-            directions = {
-                Hex(0, -1): ((-1, 0), (1, -1)),
-                Hex(1, -1): ((0, -1), (1, 0)),
-                Hex(1, 0): ((1, -1), (0, 1)),
-                Hex(0, 1): ((1, 0), (-1, 1)),
-                Hex(-1, 1): ((0, 1), (-1, 0)),
-                Hex(-1, 0): ((-1, 1), (0, -1)),
-            }
+            
             queue = deque([(hex, 3)])
             visited = set()
             visited.add(hex)
@@ -238,14 +245,14 @@ class Board:
                     continue
                 current_neighbors = current_hex.generate_adj_hexs()
                 for neighbor in current_neighbors:
-                    if self.hex_empty(neighbor) or neighbor in visited:
+                    if not self.hex_inside_board(neighbor) or self.hex_empty(neighbor) or neighbor in visited:
                         continue
                     dir = neighbor - current_hex
-                    adj_directions = directions[dir]
+                    adj_directions = self.spider_directions[dir]
                     for adj_dir in adj_directions:
                         adj_hex = current_hex + Hex(*adj_dir)
                         if (
-                            adj_hex in self.board
+                            self.hex_inside_board(adj_hex)
                             and adj_hex not in visited
                             and self.hex_empty(adj_hex)
                             and self.can_slide(current_hex, adj_hex)
@@ -254,9 +261,9 @@ class Board:
                             queue.append((adj_hex, depth - 1))
         else:
             raise ValueError("Unknown Piece")
-        
+
         for position in possible_positions:
-            if position not in self.board:
+            if not self.hex_inside_board(position):
                 possible_positions.remove(position)
         return possible_positions
 
@@ -265,9 +272,10 @@ class Board:
         Check if the hex is adjacent to at least one piece
         """
         adjacent = False
+        
         for adj_hex in hex.generate_adj_hexs():
             if (
-                adj_hex in self.board
+                self.hex_inside_board(adj_hex)
                 and adj_hex != original_hex
                 and not self.hex_empty(adj_hex)
             ):
@@ -282,7 +290,7 @@ class Board:
         A boundary hex is empty and adjacent to at least one occupied hex.
         """
         for adj_hex in hex.generate_adj_hexs():
-            if adj_hex in self.board and not self.hex_empty(adj_hex):
+            if self.hex_inside_board(adj_hex) and not self.hex_empty(adj_hex):
                 return True
         return False
 
@@ -290,10 +298,18 @@ class Board:
         """
         Check if removing a piece from current_hex would break the hive connectivity
         """
-        # If there are no pieces on the board, can't break anything
-        if not self.board:
-            return True
+        # neighbors_count=0
+        # for adj_hex in current_hex.generate_adj_hexs():
+        #     if (
+        #         self.hex_inside_board(adj_hex)
+        #         and not self.hex_empty(adj_hex)
+        #     ):
+        #         neighbors_count
+                
+        # if neighbors_count !=2:
+        #     return True
 
+        
         # Get all hexes with pieces
         board_hexes = {hex for hex, pieces in self.board.items() if pieces}
 
@@ -328,11 +344,11 @@ class Board:
         return len(visited) == len(board_hexes)
 
     def get_queen_location(self, role_type: Literal["white", "black"]) -> Hex:
-        searched_piece = Queen(role_type)
-        for hex, pieces in self.board.items():
-            if searched_piece in pieces:
-                return hex
-        return None
+        return (
+            self.white_queen_location
+            if role_type == "white"
+            else self.black_queen_location
+        )
 
     def is_endgame(self, role_type: Literal["white", "black"]) -> bool:
         queen_location = self.get_queen_location(role_type)
@@ -340,7 +356,7 @@ class Board:
             return False
         neighbors: list[Hex] = queen_location.generate_adj_hexs()
         for neighbor in neighbors:
-            if neighbor in self.board and self.hex_empty(neighbor):
+            if self.hex_inside_board(neighbor) and self.hex_empty(neighbor):
                 return False
         return True
 
@@ -358,21 +374,14 @@ class Board:
 
         dir_hex = to_hex - from_hex
         dir = (dir_hex.q, dir_hex.r)
-        directions = {
-            (0, -1): ((-1, 0), (1, -1)),
-            (1, -1): ((0, -1), (1, 0)),
-            (1, 0): ((1, -1), (0, 1)),
-            (0, 1): ((1, 0), (-1, 1)),
-            (-1, 1): ((0, 1), (-1, 0)),
-            (-1, 0): ((-1, 1), (0, -1)),
-        }
-        if dir not in directions:
+        
+        if dir not in self.slide_directions:
             return False
         counter = 0
-        adj_directions = directions[dir]
+        adj_directions = self.slide_directions[dir]
         for adj_dir in adj_directions:
             adj_hex = from_hex + Hex(*adj_dir)
-            if not self.hex_empty(adj_hex):
+            if self.hex_inside_board(adj_hex) and not self.hex_empty(adj_hex):
                 counter += 1
 
         return counter < 2
