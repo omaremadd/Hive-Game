@@ -1,7 +1,6 @@
 from .hex import Hex
 from .piece import Piece
-from collections import defaultdict
-from typing import Union
+
 from hive.piece import Ant, Hopper, Queen, Beetle, Spider
 from collections import deque
 from typing import Literal
@@ -115,6 +114,10 @@ class Board:
 
                     if is_valid:
                         possible_positions.append(hex)
+
+        for position in possible_positions:
+            if position not in self.board:
+                possible_positions.remove(position)
 
         return possible_positions
 
@@ -251,6 +254,10 @@ class Board:
                             queue.append((adj_hex, depth - 1))
         else:
             raise ValueError("Unknown Piece")
+        
+        for position in possible_positions:
+            if position not in self.board:
+                possible_positions.remove(position)
         return possible_positions
 
     def is_adjacent_to_pieces(self, hex: Hex, original_hex: Hex) -> bool:
@@ -332,7 +339,10 @@ class Board:
         if queen_location is None:
             return False
         neighbors: list[Hex] = queen_location.generate_adj_hexs()
-        return all(not self.hex_empty(neighbor) for neighbor in neighbors)
+        for neighbor in neighbors:
+            if neighbor in self.board and self.hex_empty(neighbor):
+                return False
+        return True
 
     def can_slide(self, from_hex: Hex, to_hex: Hex) -> bool:
         """

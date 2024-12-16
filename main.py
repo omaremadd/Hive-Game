@@ -1,5 +1,4 @@
 import pygame
-import sys
 import random
 
 
@@ -31,6 +30,12 @@ def main():
         end_game_result = game.run_game()
         if not end_game_result:
             break
+        if end_game_result == "menu":
+            continue
+
+        if end_game_result == "exit":
+            break
+        
         game_over = HiveGameOver()
         game_over.show_endgame_screen(end_game_result)
         return_to_menu = game_over.handle_endgame_input()
